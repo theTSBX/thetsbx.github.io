@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>7DTD Entity Card Viewer</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --bg: #0f172a;
+      --bg-elevated: #111827;
+      --bg-card: #020617;
+      --border-subtle: #1f2937;
+      --accent: #22c55e;
+      --accent-soft: rgba(34, 197, 94, 0.15);
+      --accent-strong: rgba(34, 197, 94, 0.3);
+      --text-main: #e5e7eb;
+      --text-muted: #9ca3af;
+      --text-soft: #6b7280;
+      --card-radius: 10px;
+      --column-width: 320px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: radial-gradient(circle at top left, #1f2937 0, #020617 45%, #000 100%);
+      color: var(--text-main);
+    }
+
+    .app-shell {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    header {
+      padding: 12px 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      border-bottom: 1px solid var(--border-subtle);
+      background: rgba(15, 23, 42, 0.96);
+      backdrop-filter: blur(12px);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .app-title {
+      font-size: 16px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .app-title span.logo {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 22px;
+      height: 22px;
+      border-radius: 6px;
+      background: radial-gradient(circle at 30% 10%, #4ade80 0, #22c55e 40%, #16a34a 100%);
+      box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.4), 0 0 18px rgba(34, 197, 94, 0.5);
+      font-size: 13px;
+      font-weight: 800;
+      color: #022c22;
+    }
+
+    .app-subtitle {
+      font-size: 12px;
+      color: var(--text-soft);
+    }
+
+    .controls {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 12px;
+    }
+
+    .file-input-label {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--border-subtle);
+      background: radial-gradient(circle at top left, #111827 0, #020617 60%);
+      cursor: pointer;
+      font-size: 12px;
+      color: var(--text-main);
+      transition: border-color 0.12s ease, box-shadow 0.12s ease, transform 0.04s ease;
+    }
+
+    .file-input-label:hover {
+      border-color: rgba(148, 163, 184, 0.9);
+      box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.35);
+      transform: translateY(-0.5px);
+    }
+
+    .file-input-label span.icon {
+      width: 18px;
+      height: 18px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.7);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      color: #e5e7eb;
+    }
+
+    #fileInput {
+      display: none;
+    }
+
+    .meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text-soft);
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 999px;
+      padding: 3px 8px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid var(--border-subtle);
+      font-size: 11px;
+    }
+
+    .pill-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: var(--accent);
+      box-shadow: 0 0 0 4px var(--accent-soft);
+    }
+
+    .search-input {
+      padding: 4px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border-subtle);
+      background: #020617;
+      color: var(--text-main);
+      font-size: 12px;
+      width: 180px;
+    }
+
+    .search-input::placeholder {
+      color: var(--text-soft);
+    }
+
+    main {
+      flex: 1;
+      overflow: auto;
+      padding: 12px 16px 18px;
+    }
+
+    .columns-wrapper {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      min-height: 100%;
+    }
+
+    .column {
+      flex: 0 0 var(--column-width);
+      background: rgba(15, 23, 42, 0.96);
+      border-radius: 12px;
+      border: 1px solid rgba(31, 41, 55, 0.9);
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      max-height: calc(100vh - 80px);
+    }
+
+    .column-header {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid rgba(31, 41, 55, 0.9);
+    }
+
+    .column-title {
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #e5e7eb;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .column-title-type {
+      padding: 2px 6px;
+      border-radius: 999px;
+      border: 1px solid rgba(55, 65, 81, 0.9);
+      font-size: 11px;
+      text-transform: none;
+      letter-spacing: 0.04em;
+      color: var(--text-soft);
+      background: rgba(15, 23, 42, 0.94);
+    }
+
+    .column-count {
+      font-size: 11px;
+      color: var(--text-soft);
+    }
+
+    .cards {
+      margin-top: 4px;
+      padding-right: 4px;
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: #4b5563 transparent;
+    }
+
+    .cards::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .cards::-webkit-scrollbar-thumb {
+      background: #4b5563;
+      border-radius: 999px;
+    }
+
+    .card {
+      background: radial-gradient(circle at top left, #020617 0, #000 75%);
+      border-radius: var(--card-radius);
+      border: 1px solid rgba(31, 41, 55, 0.95);
+      padding: 8px;
+      margin-bottom: 6px;
+      box-shadow: 0 8px 14px rgba(0, 0, 0, 0.6);
+      font-size: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 8px;
+      padding-bottom: 3px;
+      border-bottom: 1px solid rgba(31, 41, 55, 0.9);
+    }
+
+    .card-name {
+      font-weight: 600;
+      font-size: 12px;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+      color: #f9fafb;
+    }
+
+    .card-base {
+      font-size: 10px;
+      color: var(--text-soft);
+      white-space: nowrap;
+    }
+
+    .tags-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-top: 3px;
+    }
+
+    .tag-pill {
+      padding: 2px 6px;
+      border-radius: 999px;
+      border: 1px solid rgba(55, 65, 81, 0.9);
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-soft);
+      background: rgba(15, 23, 42, 0.96);
+    }
+
+    .tag-pill.core {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+      color: #bbf7d0;
+    }
+
+    .stats {
+      margin-top: 4px;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 4px;
+    }
+
+    .stat-item {
+      padding: 3px 4px;
+      border-radius: 6px;
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid rgba(31, 41, 55, 0.9);
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+
+    .stat-label {
+      font-size: 9px;
+      color: var(--text-soft);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .stat-value {
+      font-size: 11px;
+      color: var(--text-main);
+    }
+
+    .effects-block {
+      margin-top: 4px;
+      padding-top: 3px;
+      border-top: 1px dashed rgba(55, 65, 81, 0.9);
+    }
+
+    .effects-title {
+      font-size: 10px;
+      color: var(--text-soft);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 2px;
+    }
+
+    .effect-item {
+      font-size: 11px;
+      color: var(--text-main);
+      display: flex;
+      justify-content: space-between;
+      gap: 6px;
+    }
+
+    .effect-name {
+      font-weight: 500;
+      color: #d1d5db;
+    }
+
+    .effect-value {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 11px;
+      color: #a5b4fc;
+    }
+
+    .empty-state {
+      color: var(--text-soft);
+      font-size: 13px;
+      padding: 24px 8px;
+    }
+
+    .empty-state strong {
+      color: #e5e7eb;
+    }
+
+    @media (max-width: 900px) {
+      .columns-wrapper {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+      }
+
+      .columns-wrapper::-webkit-scrollbar {
+        height: 6px;
+      }
+
+      .columns-wrapper::-webkit-scrollbar-thumb {
+        background: #4b5563;
+        border-radius: 999px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header>
+      <div>
+        <div class="app-title">
+          <span class="logo">E</span>
+          Entity Card Viewer
+        </div>
+        <div class="app-subtitle">
+          Drop in your 7DTD-style entity XML and browse resolved entities as cards grouped by type.
+        </div>
+      </div>
+
+      <div class="controls">
+        <label class="file-input-label">
+          <span class="icon">⇪</span>
+          <span>Load XML</span>
+          <input id="fileInput" type="file" accept=".xml,.txt,.config,.dat" />
+        </label>
+
+        <input
+          id="searchInput"
+          class="search-input"
+          type="text"
+          placeholder="Filter by name / tag"
+        />
+
+        <div class="meta">
+          <div class="pill">
+            <span class="pill-dot"></span>
+            <span id="metaSummary">No file loaded</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <div id="columns" class="columns-wrapper">
+        <div class="empty-state">
+          <strong>No entities yet.</strong><br />
+          Load an XML file with <code>&lt;entity_class&gt;</code> definitions (and an optional
+          <code>&lt;replace_passive_effect&gt;</code> block) to see columns and cards.
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    "use strict";
+
+    /** =========================
+     *  Wiring + UI
+     *  ========================= */
+
+    const fileInput = document.getElementById("fileInput");
+    const searchInput = document.getElementById("searchInput");
+    const columnsEl = document.getElementById("columns");
+    const metaSummaryEl = document.getElementById("metaSummary");
+
+    /** @type {ResolvedEntity[]} */
+    let allEntities = [];
+
+    fileInput.addEventListener("change", (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const text = String(reader.result || "");
+          allEntities = parseEntitiesFromXml(text);
+          metaSummaryEl.textContent =
+            file.name + " — " + allEntities.length + " entities";
+
+          render();
+        } catch (err) {
+          console.error(err);
+          metaSummaryEl.textContent = "Failed to parse XML: " + err.message;
+          columnsEl.innerHTML =
+            '<div class="empty-state"><strong>Error parsing XML.</strong><br />Check the console for details.</div>';
+        }
+      };
+      reader.readAsText(file);
+    });
+
+    searchInput.addEventListener("input", () => {
+      render();
+    });
+
+    function render() {
+      const filterText = searchInput.value.trim().toLowerCase();
+
+      let filtered = allEntities;
+      if (filterText) {
+        filtered = allEntities.filter((e) => {
+          const name = e.name.toLowerCase();
+          const tagsJoined = e.tags.join(",").toLowerCase();
+          return (
+            name.includes(filterText) || tagsJoined.includes(filterText)
+          );
+        });
+      }
+
+      if (!filtered.length) {
+        columnsEl.innerHTML =
+          '<div class="empty-state"><strong>No entities match.</strong><br />Try a different search or load another XML file.</div>';
+        return;
+      }
+
+      const types = Array.from(new Set(filtered.map((e) => e.type))).sort();
+      const frag = document.createDocumentFragment();
+
+      types.forEach((typeName) => {
+        const entitiesOfType = filtered
+          .filter((e) => e.type === typeName)
+          .sort((a, b) => a.name.localeCompare(b.name));
+
+        const col = document.createElement("div");
+        col.className = "column";
+
+        const header = document.createElement("div");
+        header.className = "column-header";
+
+        const title = document.createElement("div");
+        title.className = "column-title";
+        title.textContent = typeName || "Unknown";
+
+        const badge = document.createElement("span");
+        badge.className = "column-title-type";
+        badge.textContent = typeName ? "TYPE" : "UNCLASSIFIED";
+        title.appendChild(badge);
+
+        const count = document.createElement("div");
+        count.className = "column-count";
+        count.textContent = entitiesOfType.length + " entities";
+
+        header.appendChild(title);
+        header.appendChild(count);
+        col.appendChild(header);
+
+        const cardsContainer = document.createElement("div");
+        cardsContainer.className = "cards";
+
+        entitiesOfType.forEach((entity) => {
+          cardsContainer.appendChild(renderCard(entity));
+        });
+
+        col.appendChild(cardsContainer);
+        frag.appendChild(col);
+      });
+
+      columnsEl.innerHTML = "";
+      columnsEl.appendChild(frag);
+    }
+
+    /**
+     * Render a single entity card element.
+     * @param {ResolvedEntity} entity
+     * @returns {HTMLElement}
+     */
+    function renderCard(entity) {
+      const card = document.createElement("div");
+      card.className = "card";
+
+      const header = document.createElement("div");
+      header.className = "card-header";
+
+      const nameEl = document.createElement("div");
+      nameEl.className = "card-name";
+      nameEl.textContent = entity.name;
+
+      const baseEl = document.createElement("div");
+      baseEl.className = "card-base";
+      baseEl.textContent = entity.baseClass
+        ? "Extends " + entity.baseClass
+        : "Base class";
+
+      header.appendChild(nameEl);
+      header.appendChild(baseEl);
+      card.appendChild(header);
+
+      if (entity.tags && entity.tags.length) {
+        const tagsRow = document.createElement("div");
+        tagsRow.className = "tags-row";
+
+        entity.tags.forEach((tag) => {
+          const t = document.createElement("span");
+          t.className = "tag-pill";
+          if (tag === "zombie" || tag === "animal" || tag === "npc") {
+            t.classList.add("core");
+          }
+          t.textContent = tag;
+          tagsRow.appendChild(t);
+        });
+
+        card.appendChild(tagsRow);
+      }
+
+      const stats = document.createElement("div");
+      stats.className = "stats";
+
+      const props = entity.properties || {};
+      const coreKeys = [
+        "UserSpawnType",
+        "MoveSpeedAggro",
+        "ExperienceGain",
+        "LootDropProb"
+      ];
+
+      coreKeys.forEach((key) => {
+        if (props[key] == null) return;
+        const stat = document.createElement("div");
+        stat.className = "stat-item";
+
+        const label = document.createElement("div");
+        label.className = "stat-label";
+        label.textContent = key;
+
+        const val = document.createElement("div");
+        val.className = "stat-value";
+        val.textContent =
+          typeof props[key] === "object"
+            ? JSON.stringify(props[key])
+            : String(props[key]);
+
+        stat.appendChild(label);
+        stat.appendChild(val);
+        stats.appendChild(stat);
+      });
+
+      if (stats.childElementCount > 0) {
+        card.appendChild(stats);
+      }
+
+      const allEffects = (entity.effects || []).flatMap((group) =>
+        group.passiveEffects.map((pe) => ({
+          groupName: group.groupName,
+          ...pe
+        }))
+      );
+
+      const primaryHealth = allEffects.find(
+        (e) => e.name.toLowerCase() === "healthmax"
+      );
+
+      if (primaryHealth || allEffects.length) {
+        const block = document.createElement("div");
+        block.className = "effects-block";
+
+        const title = document.createElement("div");
+        title.className = "effects-title";
+        title.textContent = "Base Effects";
+        block.appendChild(title);
+
+        const toShow = primaryHealth
+          ? [primaryHealth]
+          : allEffects.slice(0, 1);
+
+        toShow.forEach((eff) => {
+          const row = document.createElement("div");
+          row.className = "effect-item";
+
+          const left = document.createElement("span");
+          left.className = "effect-name";
+          left.textContent = eff.name || "(unnamed)";
+
+          const right = document.createElement("span");
+          right.className = "effect-value";
+          right.textContent = eff.value;
+
+          row.appendChild(left);
+          row.appendChild(right);
+          block.appendChild(row);
+        });
+
+        card.appendChild(block);
+      }
+
+      return card;
+    }
+
+    /** =========================
+     *  Parsing + resolution
+     *  ========================= */
+
+    /**
+     * @typedef {Object} PassiveEffect
+     * @property {string} name
+     * @property {string} operation
+     * @property {string} rawValue
+     * @property {string} value
+     */
+
+    /**
+     * @typedef {Object} EffectGroup
+     * @property {string} groupName
+     * @property {PassiveEffect[]} passiveEffects
+     */
+
+    /**
+     * @typedef {Object} EntityClassInternal
+     * @property {string} name
+     * @property {string|null} extendsName
+     * @property {Object.<string, any>} properties
+     * @property {EffectGroup[]} effects
+     */
+
+    /**
+     * @typedef {Object} ResolvedEntity
+     * @property {string} name
+     * @property {string|null} baseClass
+     * @property {string} type
+     * @property {string[]} tags
+     * @property {Object.<string, any>} properties
+     * @property {EffectGroup[]} effects
+     */
+
+    /**
+     * Public entry point.
+     * @param {string} xmlText
+     * @returns {ResolvedEntity[]}
+     */
+    function parseEntitiesFromXml(xmlText) {
+      const doc = parseXml(xmlText);
+      const passiveVarMap = buildPassiveVarMap(doc);
+      const classMap = buildEntityClassMap(doc, passiveVarMap);
+
+      const resolvedCache = new Map();
+      const result = [];
+
+      for (const [name] of classMap.entries()) {
+        const entity = resolveEntityClass(name, classMap, resolvedCache);
+        result.push(entity);
+      }
+
+      return result;
+    }
+
+    function parseXml(xmlText) {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(xmlText, "text/xml");
+      const parseError = doc.querySelector("parsererror");
+      if (parseError) {
+        throw new Error("Failed to parse XML: " + parseError.textContent);
+      }
+      return doc;
+    }
+
+    function buildPassiveVarMap(doc) {
+      const map = new Map();
+      const container = doc.querySelector("replace_passive_effect");
+      if (!container) return map;
+
+      const props = container.querySelectorAll(":scope > property");
+      props.forEach((propNode) => {
+        const name = propNode.getAttribute("name");
+        if (!name) return;
+        const value = propNode.getAttribute("value") ?? "";
+        map.set(name, value);
+      });
+
+      return map;
+    }
+
+    function buildEntityClassMap(doc, passiveVarMap) {
+      const map = new Map();
+      const nodes = doc.querySelectorAll("entity_class");
+
+      nodes.forEach((entityNode) => {
+        const name = entityNode.getAttribute("name");
+        if (!name) return;
+
+        const extendsName = entityNode.getAttribute("extends") || null;
+
+        const properties = {};
+        const propNodes = entityNode.querySelectorAll(":scope > property");
+        propNodes.forEach((propNode) => {
+          const propName = propNode.getAttribute("name");
+          if (!propName) return;
+          const valueAttr = propNode.getAttribute("value") ?? "";
+          const dataAttr = propNode.getAttribute("data");
+
+          let value = valueAttr;
+          if (dataAttr != null) {
+            value = {
+              value: valueAttr,
+              data: dataAttr
+            };
+          }
+
+          properties[propName] = value;
+        });
+
+        const effects = [];
+        const effectGroupNodes =
+          entityNode.querySelectorAll(":scope > effect_group");
+        effectGroupNodes.forEach((groupNode) => {
+          const groupName = groupNode.getAttribute("name") || "";
+          const passiveEffects = [];
+
+          const peNodes =
+            groupNode.querySelectorAll(":scope > passive_effect");
+          peNodes.forEach((peNode) => {
+            const effName = peNode.getAttribute("name") || "";
+            const operation = peNode.getAttribute("operation") || "";
+            const rawValue = peNode.getAttribute("value") || "";
+
+            let resolvedValue = rawValue;
+            if (rawValue.startsWith("^")) {
+              const key = rawValue.slice(1);
+              if (passiveVarMap.has(key)) {
+                resolvedValue = passiveVarMap.get(key);
+              }
+            }
+
+            const pe = {
+              name: effName,
+              operation,
+              rawValue,
+              value: resolvedValue
+            };
+            passiveEffects.push(pe);
+          });
+
+          if (passiveEffects.length > 0) {
+            const group = {
+              groupName,
+              passiveEffects
+            };
+            effects.push(group);
+          }
+        });
+
+        const record = {
+          name,
+          extendsName,
+          properties,
+          effects
+        };
+
+        map.set(name, record);
+      });
+
+      return map;
+    }
+
+    function resolveEntityClass(name, classMap, cache) {
+      if (cache.has(name)) {
+        return cache.get(name);
+      }
+
+      const cls = classMap.get(name);
+      if (!cls) {
+        throw new Error("Unknown entity_class: " + name);
+      }
+
+      let mergedProps = {};
+      let mergedEffects = [];
+
+      if (cls.extendsName) {
+        const parentEntity = resolveEntityClass(
+          cls.extendsName,
+          classMap,
+          cache
+        );
+        mergedProps = { ...parentEntity.properties };
+        mergedEffects = cloneEffects(parentEntity.effects);
+      }
+
+      mergedProps = {
+        ...mergedProps,
+        ...cls.properties
+      };
+
+      mergedEffects = mergeEffects(mergedEffects, cls.effects);
+
+      const tagsProp =
+        typeof mergedProps.Tags === "string" ? mergedProps.Tags : "";
+      const tags = tagsProp
+        .split(",")
+        .map((t) => t.trim())
+        .filter((t) => t.length > 0);
+
+      let type = "unknown";
+      const idxEntity = tags.indexOf("entity");
+      if (idxEntity >= 0 && idxEntity + 1 < tags.length) {
+        type = tags[idxEntity + 1];
+      } else if (tags.length > 0) {
+        type = tags[0];
+      }
+
+      const entity = {
+        name: cls.name,
+        baseClass: cls.extendsName,
+        type,
+        tags,
+        properties: mergedProps,
+        effects: mergedEffects
+      };
+
+      cache.set(name, entity);
+      return entity;
+    }
+
+    function cloneEffects(effects) {
+      return effects.map((group) => ({
+        groupName: group.groupName,
+        passiveEffects: group.passiveEffects.map((pe) => ({
+          name: pe.name,
+          operation: pe.operation,
+          rawValue: pe.rawValue,
+          value: pe.value
+        }))
+      }));
+    }
+
+    function mergeEffects(baseEffects, childEffects) {
+      const result = cloneEffects(baseEffects);
+
+      childEffects.forEach((childGroup) => {
+        let targetGroup = result.find(
+          (g) => g.groupName === childGroup.groupName
+        );
+        if (!targetGroup) {
+          targetGroup = {
+            groupName: childGroup.groupName,
+            passiveEffects: []
+          };
+          result.push(targetGroup);
+        }
+
+        childGroup.passiveEffects.forEach((childPe) => {
+          const idx = targetGroup.passiveEffects.findIndex(
+            (pe) =>
+              pe.name === childPe.name &&
+              pe.operation === childPe.operation
+          );
+
+          if (idx >= 0) {
+            targetGroup.passiveEffects[idx] = {
+              name: childPe.name,
+              operation: childPe.operation,
+              rawValue: childPe.rawValue,
+              value: childPe.value
+            };
+          } else {
+            targetGroup.passiveEffects.push({
+              name: childPe.name,
+              operation: childPe.operation,
+              rawValue: childPe.rawValue,
+              value: childPe.value
+            });
+          }
+        });
+      });
+
+      return result;
+    }
+  </script>
+</body>
+</html>
